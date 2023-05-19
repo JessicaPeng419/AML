@@ -1,0 +1,513 @@
+---
+title: "AML Project"
+author: "Weiyi Gong"
+date: "2023-05-15"
+output: pdf_document
+---
+```{r}
+library(ComparisonSurv)
+library(survival)
+library(survminer)
+library(mice)
+library(coin)
+library(readxl)
+library(GGally)
+library(dplyr)
+library(tidyverse)
+library(openxlsx2)
+library(knitr)
+```
+
+```{r}
+data <- read_excel("AML Persistent Mutation Data Updated 2.xlsx")
+head(data)
+
+data <- data %>%
+  rename(
+    Ov.suv.trans.days = `Overall Survival from Transplant (Days)`,
+    status = `Dead (0 Alive, 1 Deceased)`,
+    re.suv.days = `Relapse Free Survival (Days)`,
+    re.status = `Relapsed (0 No, 1 Yes)`,
+    Ov.suv.diag.days = `Overall Survival from Diagnosis (Days)`,
+    Path1 = `CHIP Mutation Pathway`,
+    Path2 = `Other Pathway`,
+    Path3 = `DNA Methylation Mutation Pathway`,
+    Path4 = `RTK RAS Mutation Pathway`,
+    Path5 = `RNA Splicing Mutation Pathway`,
+    Path6 = `Transcrip Factor Mutation Pathway`,
+    Age.diag = `Age at Diagnosis (Yr)`,
+    Age.trans = `Age at Transplant (Yr)`,
+    Type = `Time of the Bone Marrow Sample`
+  )
+```
+```{r}
+# Split the dataset
+
+#Pre-transplant
+data_pre <- data %>%
+  filter(`Type` == "Pretransplant")
+head(data_pre)
+colnames(data_pre)
+nrow(data_pre)
+
+#Post-transplant
+data_post <- data %>%
+  filter(`Type` == "Post-transplant")
+head(data_post)
+nrow(data_post)
+```
+```{r}
+# Pre-transplant Distribution
+control_grp_pre <- data_pre %>%
+  filter(`Path1` == "0" &
+         `Path2` == "0" &
+         `Path3` == "0" &
+         `Path4` == "0" &
+         `Path5` == "0" &
+         `Path6` == "0")
+nrow(control_grp_pre)
+
+CHIP_path_pre <- data_pre %>%
+  filter(`Path1` == "1")
+nrow(CHIP_path_pre)
+
+other_path_pre <- data_pre %>%
+  filter(`Path2` == "1")
+nrow(other_path_pre)
+
+DNA_path_pre <- data_pre %>%
+  filter(`Path3` == "1")
+nrow(DNA_path_pre)
+
+RTK_path_pre <- data_pre %>%
+  filter(`Path4` == "1")
+nrow(RTK_path_pre)
+
+RNA_path_pre <- data_pre %>%
+  filter(`Path5` == "1")
+nrow(RNA_path_pre)
+
+Transcrip_path_pre <- data_pre %>%
+  filter(`Path6` == "1")
+nrow(Transcrip_path_pre)
+
+# Distribution
+Control_Pre <- c(nrow(control_grp_pre))
+CHIP_Pre <- c(nrow(CHIP_path_pre))
+Other_Pre <- c(nrow(other_path_pre))
+DNA_Methylation_Pre <- c(nrow(DNA_path_pre))
+RTK_RAS_Pre <- c(nrow(RTK_path_pre))
+RNA_Splicing_Pre <- c(nrow(RNA_path_pre))
+Transcrip_Factor_Pre <- c(nrow(Transcrip_path_pre))
+
+Distribution_at_Pre_transplant <- data.frame(
+  Control_Pre,
+  CHIP_Pre,
+  Other_Pre,
+  DNA_Methylation_Pre,
+  RTK_RAS_Pre,
+  RNA_Splicing_Pre,
+  Transcrip_Factor_Pre)
+
+kable(Distribution_at_Pre_transplant)
+```
+```{r}
+# Pre-transplant Kaplan-Meier
+
+# CHIP Mutation Pathway
+pre_1 <- rbind(control_grp_pre, CHIP_path_pre)
+km_pre_CHIP <- survfit(Surv(Ov.suv.trans.days, status) ~ Path1, data = pre_1)
+km_pre_CHIP
+summary(km_pre_CHIP)
+summary_df_pre1 <- surv_summary(km_pre_CHIP, colon)
+
+ggsurvplot_df(
+  summary_df_pre1,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank CHIP
+logrank_pre_CHIP <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path1, 
+                             data = pre_1)
+print(logrank_pre_CHIP)
+```
+```{r}
+# Other Pathway
+pre_2 <- rbind(control_grp_pre, other_path_pre)
+km_pre_other <- survfit(Surv(Ov.suv.trans.days, status) ~ Path2, data = pre_2)
+km_pre_other
+summary(km_pre_other)
+summary_df_pre2 <- surv_summary(km_pre_other, colon)
+
+ggsurvplot_df(
+  summary_df_pre2,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank other
+logrank_pre_other <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path2, 
+                              data = pre_2)
+print(logrank_pre_other)
+```
+```{r}
+# DNA Methylation Mutation Pathway
+pre_3 <- rbind(control_grp_pre, DNA_path_pre)
+km_pre_DNA <- survfit(Surv(Ov.suv.trans.days, status) ~ Path3, data = pre_3)
+km_pre_DNA
+summary(km_pre_DNA)
+summary_df_pre3 <- surv_summary(km_pre_DNA, colon)
+
+ggsurvplot_df(
+  summary_df_pre3,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank DNA Methylation
+logrank_pre_DNA <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path3, 
+                            data = pre_3)
+print(logrank_pre_DNA)
+```
+```{r}
+# RTK RAS Mutation Pathway
+pre_4 <- rbind(control_grp_pre, RTK_path_pre)
+km_pre_RTK <- survfit(Surv(Ov.suv.trans.days, status) ~ Path4, data = pre_4)
+km_pre_RTK
+summary(km_pre_RTK)
+summary_df_pre4 <- surv_summary(km_pre_RTK, colon)
+
+ggsurvplot_df(
+  summary_df_pre4,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank RTK RAS
+logrank_pre_RTK <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path4, 
+                            data = pre_4)
+print(logrank_pre_RTK)
+```
+```{r}
+# RNA Splicing Mutation Pathway
+pre_5 <- rbind(control_grp_pre, RNA_path_pre)
+km_pre_RNA <- survfit(Surv(Ov.suv.trans.days, status) ~ Path5, data = pre_5)
+km_pre_RNA
+summary(km_pre_RNA)
+summary_df_pre5 <- surv_summary(km_pre_RNA, colon)
+
+ggsurvplot_df(
+  summary_df_pre5,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank RNA Splicing
+logrank_pre_RNA <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path5, 
+                            data = pre_5)
+print(logrank_pre_RNA)
+```
+```{r}
+# Transcrip Factor Mutation Pathway
+pre_6 <- rbind(control_grp_pre, Transcrip_path_pre)
+km_pre_Transcrip <- survfit(Surv(Ov.suv.trans.days, status) ~ Path6, 
+                            data = pre_6)
+km_pre_Transcrip
+summary(km_pre_Transcrip)
+summary_df_pre6 <- surv_summary(km_pre_Transcrip, colon)
+
+ggsurvplot_df(
+  summary_df_pre6,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank Transcrip Factor
+logrank_pre_Transcrip <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path6, 
+                            data = pre_6)
+print(logrank_pre_Transcrip)
+```
+
+
+```{r}
+# Post-transplant Distribution
+control_grp_post <- data_post %>%
+  filter(`Path1` == "0" &
+         `Path2` == "0" &
+         `Path3` == "0" &
+         `Path4` == "0" &
+         `Path5` == "0" &
+         `Path6` == "0")
+nrow(control_grp_post)
+
+CHIP_path_post <- data_post %>%
+  filter(`Path1` == "1")
+nrow(CHIP_path_post)
+
+other_path_post <- data_post %>%
+  filter(`Path2` == "1")
+nrow(other_path_post)
+
+DNA_path_post <- data_post %>%
+  filter(`Path3` == "1")
+nrow(DNA_path_post)
+
+RTK_path_post <- data_post %>%
+  filter(`Path4` == "1")
+nrow(RTK_path_post)
+
+RNA_path_post <- data_post %>%
+  filter(`Path5` == "1")
+nrow(RNA_path_post)
+
+Transcrip_path_post <- data_post %>%
+  filter(`Path6` == "1")
+nrow(Transcrip_path_post)
+
+# Distribution
+Control_Post <- c(nrow(control_grp_post))
+CHIP_Post <- c(nrow(CHIP_path_post))
+Other_Post <- c(nrow(other_path_post))
+DNA_Methylation_Post <- c(nrow(DNA_path_post))
+RTK_RAS_Post <- c(nrow(RTK_path_post))
+RNA_Splicing_Post <- c(nrow(RNA_path_post))
+Transcrip_Factor_Post <- c(nrow(Transcrip_path_post))
+
+Distribution_at_Post_transplant <- data.frame(
+  Control_Post,
+  CHIP_Post,
+  Other_Post,
+  DNA_Methylation_Post,
+  RTK_RAS_Post,
+  RNA_Splicing_Post,
+  Transcrip_Factor_Post)
+
+kable(Distribution_at_Post_transplant)
+```
+```{r}
+# Post-transplant Kaplan-Meier
+
+# CHIP Mutation Pathway
+post_1 <- rbind(control_grp_post, CHIP_path_post)
+km_post_CHIP <- survfit(Surv(Ov.suv.trans.days, status) ~ Path1, data = post_1)
+km_post_CHIP
+summary(km_post_CHIP)
+summary_df_post1 <- surv_summary(km_post_CHIP, colon)
+
+ggsurvplot_df(
+  summary_df_post1,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank CHIP
+logrank_post_CHIP <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path1, 
+                            data = post_1)
+print(logrank_post_CHIP)
+```
+```{r}
+# Other Pathway
+post_2 <- rbind(control_grp_post, other_path_post)
+km_post_other <- survfit(Surv(Ov.suv.trans.days, status) ~ Path2, data = post_2)
+km_post_other
+summary(km_post_other)
+summary_df_post2 <- surv_summary(km_post_other, colon)
+
+ggsurvplot_df(
+  summary_df_post2,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank other
+logrank_post_other <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path2, 
+                            data = post_2)
+print(logrank_post_other)
+```
+```{r}
+# DNA Methylation Mutation Pathway 
+post_3 <- rbind(control_grp_post, DNA_path_post)
+km_post_DNA <- survfit(Surv(Ov.suv.trans.days, status) ~ Path3, data = post_3)
+km_post_DNA
+summary(km_post_DNA)
+summary_df_post3 <- surv_summary(km_post_DNA, colon)
+
+ggsurvplot_df(
+  summary_df_post3,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank DNA Methylation
+logrank_post_DNA <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path3, 
+                            data = post_3)
+print(logrank_post_DNA)
+```
+```{r}
+# RTK RAS Mutation Pathway 
+post_4 <- rbind(control_grp_post, RTK_path_post)
+km_post_RTK <- survfit(Surv(Ov.suv.trans.days, status) ~ Path4, data = post_4)
+km_post_RTK
+summary(km_post_RTK)
+summary_df_post4 <- surv_summary(km_post_RTK, colon)
+
+ggsurvplot_df(
+  summary_df_post4,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank RTK RAS
+logrank_post_RTK <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path4, 
+                            data = post_4)
+print(logrank_post_RTK)
+```
+```{r}
+# RNA Splicing Mutation Pathway
+post_5 <- rbind(control_grp_post, RNA_path_post)
+km_post_RNA <- survfit(Surv(Ov.suv.trans.days, status) ~ Path5, data = post_5)
+km_post_RNA
+summary(km_post_RNA)
+summary_df_post5 <- surv_summary(km_post_RNA, colon)
+
+ggsurvplot_df(
+  summary_df_post5,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank RNA Splicing
+logrank_post_RNA <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path5, 
+                            data = post_5)
+print(logrank_post_RNA)
+```
+```{r}
+# Transcrip Factor Mutation Pathway
+post_6 <- rbind(control_grp_post, Transcrip_path_post)
+km_post_Transcrip <- survfit(Surv(Ov.suv.trans.days, status) ~ Path6, 
+                             data = post_6)
+km_post_Transcrip
+summary(km_post_Transcrip)
+summary_df_post6 <- surv_summary(km_post_Transcrip, colon)
+
+ggsurvplot_df(
+  summary_df_post6,
+  pval = TRUE,    # Add p-value to the plot
+  pval.size = 4,  # Set the size of the p-value
+  pval.coord = c(0.05, 0.95),  # Set the coordinates of the p-value
+  surv.median.line = "hv",     # Add a median survival line
+  ggtheme = theme_minimal(),   # Set the plot theme
+  xlab = "Time (days)",         # Set the x-axis label
+  ylab = "Survival probability", # Set the y-axis label
+  conf.int = TRUE,   # Add confidence intervals
+  conf.int.style = "ribbon",   # Set the style of the confidence intervals
+  conf.int.alpha = 0.3,        # Set the transparency of the confidence intervals
+  conf.int.color = "gray"      # Set the color of the confidence intervals
+)
+
+# Log-rank Transcrip Factor
+logrank_post_Transcrip <- survdiff(Surv(Ov.suv.trans.days, status) ~ Path6, 
+                            data = post_6)
+print(logrank_post_Transcrip)
+```
+
